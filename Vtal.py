@@ -94,11 +94,17 @@ if st.button("🚀 Processar"):
         fgts_multa_mask = resultado['Verba Consolidada'].isin(['FGTS', 'MULTA FGTS'])
         if fgts_multa_mask.any():
             subtotal_fgts_multa = resultado.loc[fgts_multa_mask, ['Valor Corrigido', 'Juros']].sum()
+
+            # remove as linhas individuais FGTS e MULTA FGTS
+            resultado = resultado[~fgts_multa_mask]
+
+            # adiciona apenas a linha consolidada
             linha_fgts_multa = pd.DataFrame([[
                 "FGTS + MULTA 40%",
                 subtotal_fgts_multa['Valor Corrigido'],
                 subtotal_fgts_multa['Juros']
             ]], columns=['Verba Consolidada', 'Valor Corrigido', 'Juros'])
+
             resultado = pd.concat([resultado, linha_fgts_multa], ignore_index=True)
 
         st.success("✅ Processamento concluído!")
@@ -122,5 +128,3 @@ if st.button("🚀 Processar"):
             )
 
         st.dataframe(resultado_exibicao)
-
-
