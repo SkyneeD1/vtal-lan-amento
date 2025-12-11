@@ -64,26 +64,42 @@ if st.button("🚀 Processar"):
 
         # 🔥 Agrupamento por verba consolidada
         def agrupar_verba(descricao):
-            if "FGTS" in descricao and "MULTA" not in descricao:
+            desc = descricao.upper()
+
+            # FGTS puro
+            if "FGTS" in desc and "MULTA" not in desc:
                 return "FGTS"
-            if "MULTA SOBRE FGTS" in descricao:
+
+            # Multa de 40% sobre FGTS (várias formas de escrever)
+            if ("MULTA SOBRE FGTS" in desc) or ("MULTA DE 40%" in desc and "FGTS" in desc):
                 return "MULTA FGTS"
 
             prefixos_reflexos = ["13º", "FÉRIAS", "AVISO", "REPOUSO"]
 
-            if any(descricao.startswith(prefixo) for prefixo in prefixos_reflexos):
-                if "SOBRE" in descricao:
-                    partes = descricao.split("SOBRE", 1)
+            if any(desc.startswith(prefixo) for prefixo in prefixos_reflexos):
+                if "SOBRE" in desc:
+                    partes = desc.split("SOBRE", 1)
                     verba = partes[1].strip()
                     return verba
                 else:
-                    return descricao
+                    return desc
             else:
-                return descricao
+                return desc
 
         df['Verba Consolidada'] = df['Descricao'].apply(agrupar_verba)
 
         resultado = df.groupby('Verba Consolidada')[['Valor Corrigido', 'Juros']].sum().reset_index()
+
+        # ➕ Linha específica somando FGTS + Multa 40%
+        fgts_multa_mask = resultado['Verba Consolidada'].isin(['FGTS', 'MULTA FGTS'])
+        if fgts_multa_mask.any():
+            subtotal_fgts_multa = resultado.loc[fgts_multa_mask, ['Valor Corrigido', 'Juros']].sum()
+            linha_fgts_multa = pd.DataFrame([[
+                "FGTS + MULTA 40%",
+                subtotal_fgts_multa['Valor Corrigido'],
+                subtotal_fgts_multa['Juros']
+            ]], columns=['Verba Consolidada', 'Valor Corrigido', 'Juros'])
+            resultado = pd.concat([resultado, linha_fgts_multa], ignore_index=True)
 
         st.success("✅ Processamento concluído!")
 
@@ -106,3 +122,5 @@ if st.button("🚀 Processar"):
             )
 
         st.dataframe(resultado_exibicao)
+
+
